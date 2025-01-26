@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+    <name>Dice Shenanigans</name>
+    <directory>dice shenanigans</directory>
+    <id>3415382013</id>
+    <description>This mod requires REPENTOGON. Press the tilde key to open the new debug console and menu. There's a new Shenanigans option that will let you roll a virtual dice.
+
+Arbitrary randomness is now at your fingertips. Flip a coin, choose a direction, or roll a dice all the way up to a D100.
+
+Note: Copying with the icon setting is currently broken. The text gets garbled in the clipboard. This has been fixed on github and should be in the next repentogon release. Logging to file works correctly. The log file is located here: C:\Users\username\Documents\My Games\Binding of Isaac Repentance\log.txt</description>
+    <version>1.1</version>
+    <visibility>Public</visibility>
+    <tag id="Lua"/>
+</metadata>
