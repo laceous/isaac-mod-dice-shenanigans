@@ -230,10 +230,11 @@ if REPENTOGON then
       for i, v in ipairs(styles[style]) do
         local stat = tempStats[v] or 0
         local percent = stat / statSum * 100
+        local progStatId = progStatIdPrefix .. i
         
         results = results .. '\n' .. string.format('%s x%d (%.2f%%)', v, stat, percent)
-        ImGui.AddProgressBar(treeStatsId, progStatIdPrefix .. i, v, stat / statMax, string.format('x%d (%.2f%%)', stat, percent))
-        table.insert(progressBars, progStatIdPrefix .. i)
+        ImGui.AddProgressBar(treeStatsId, progStatId, v, stat / statMax, string.format('x%d (%.2f%%)', stat, percent))
+        table.insert(progressBars, progStatId)
       end
     end, false)
     ImGui.AddElement(tab, '', ImGuiElement.SameLine, '')
@@ -315,10 +316,11 @@ if REPENTOGON then
       for i = startAt == 1 and 1 or 0, startAt == 1 and sides or sides - 1 do
         local stat = tempStats[i] or 0
         local percent = stat / statSum * 100
+        local progStatId = progStatIdPrefix .. i
         
         results = results .. '\n' .. string.format('%d x%d (%.2f%%)', i, stat, percent)
-        ImGui.AddProgressBar(treeStatsId, progStatIdPrefix .. i, i, stat / statMax, string.format('x%d (%.2f%%)', stat, percent))
-        table.insert(progressBars, progStatIdPrefix .. i)
+        ImGui.AddProgressBar(treeStatsId, progStatId, i, stat / statMax, string.format('x%d (%.2f%%)', stat, percent))
+        table.insert(progressBars, progStatId)
       end
     end, false)
     ImGui.AddElement(tab, '', ImGuiElement.SameLine, '')
