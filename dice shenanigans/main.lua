@@ -26,6 +26,12 @@ if REPENTOGON then
     end
   end
   
+  -- http://lua-users.org/wiki/SimpleRound
+  function mod:round(num, numDecimalPlaces)
+    local mult = 10^(numDecimalPlaces or 0)
+    return math.floor(num * mult + 0.5) / mult
+  end
+  
   -- convert private chars to unicode chars
   -- for icons: prefer emoji chars if possible
   function mod:makeSafeToCopy(s, excludeStats)
@@ -178,7 +184,7 @@ if REPENTOGON then
     
     mod:doAdvancedTab('shenanigansTabDiceAdvanced', 'shenanigansCmbDiceAdvancedStartAt', 'shenanigansIntDiceAdvancedSides', 'shenanigansIntDiceAdvancedNum', 'shenanigansBtnDiceAdvanced', 'shenanigansBtnDiceAdvancedCopy', 'shenanigansBtnDiceAdvancedClear', 'shenanigansTxtDiceAdvancedResults', 'shenanigansTreeNodeDiceAdvancedStats', 'shenanigansProgDiceAdvancedStat')
     
-    mod:doSettingsTab('shenanigansTabDiceSettings', 'shenanigansCmbDiceSettingsCopy', 'shenanigansCmbDiceSettingsLog')
+    mod:doSettingsTab('shenanigansTabDiceSettings', 'shenanigansCmbDiceSettingsCopy', 'shenanigansCmbDiceSettingsLog', 'shenanigansPlotDiceSettingsRand', 'shenanigansBtnDiceSettingsCopy')
   end
   
   function mod:doBasicTab(styles, tab, cmbStyleId, intNumId, intNumLabel, btnId, btnLabel, btnCopyId, btnClearId, txtResultsId, treeStatsId, progStatIdPrefix)
@@ -262,7 +268,7 @@ if REPENTOGON then
   end
   
   function mod:doAdvancedTab(tab, cmbStartAtId, intSidesId, intNumId, btnId, btnCopyId, btnClearId, txtResultsId, treeStatsId, progStatIdPrefix)
-    local startAt = 1
+    local startAtZero = false
     local sides = 20
     local num = 1
     local results = ''
@@ -270,12 +276,12 @@ if REPENTOGON then
     local progressBars = {}
     
     ImGui.AddCombobox(tab, cmbStartAtId, '', function(i)
-      startAt = i
-    end, { 'Start at 0', 'Start at 1' }, startAt, true)
+      startAtZero = i == 0
+    end, { 'Start at 0', 'Start at 1' }, startAtZero and 0 or 1, true)
     ImGui.AddSliderInteger(tab, intSidesId, 'Sides (D' .. sides .. ')', nil, sides, 1, 100) -- D100
     ImGui.AddCallback(intSidesId, ImGuiCallback.DeactivatedAfterEdit, function(i) -- Edited
       sides = i
-      ImGui.UpdateData(intSidesId, ImGuiData.Label, 'Sides (D' .. i .. ')')
+      ImGui.UpdateData(intSidesId, ImGuiData.Label, 'Sides (D' .. sides .. ')')
     end)
     ImGui.AddSliderInteger(tab, intNumId, 'Num rolls', function(i)
       num = i
@@ -289,7 +295,7 @@ if REPENTOGON then
       local statSum = 0
       
       for i = 1, num do
-        local tempResult = rng:RandomInt(sides) + (startAt == 1 and 1 or 0)
+        local tempResult = rng:RandomInt(sides) + (startAtZero and 0 or 1)
         table.insert(tempResults, tempResult)
         
         if tempStats[tempResult] then
@@ -303,7 +309,7 @@ if REPENTOGON then
       ImGui.UpdateText(txtResultsId, results)
       results = results .. '\n'
       
-      for i = startAt == 1 and 1 or 0, startAt == 1 and sides or sides - 1 do
+      for i = startAtZero and 0 or 1, startAtZero and sides - 1 or sides do
         if tempStats[i] then
           if tempStats[i] > statMax then
             statMax = tempStats[i]
@@ -313,7 +319,7 @@ if REPENTOGON then
       end
       
       mod:removeProgressBars(progressBars)
-      for i = startAt == 1 and 1 or 0, startAt == 1 and sides or sides - 1 do
+      for i = startAtZero and 0 or 1, startAtZero and sides - 1 or sides do
         local stat = tempStats[i] or 0
         local percent = stat / statSum * 100
         local progStatId = progStatIdPrefix .. i
@@ -347,7 +353,7 @@ if REPENTOGON then
     end)
   end
   
-  function mod:doSettingsTab(tab, cmbCopyId, cmbLogId)
+  function mod:doSettingsTab(tab, cmbCopyId, cmbLogId, plotRandId, btnCopyId)
     ImGui.AddCombobox(tab, cmbCopyId, 'Copy', function(i)
       mod.useIconsOnCopy = i == 1
     end, { 'Simple', 'Icons' }, mod.useIconsOnCopy and 1 or 0, true)
@@ -356,6 +362,42 @@ if REPENTOGON then
       mod.logToFileOnCopy = i == 1
     end, { 'Off', 'On' }, mod.logToFileOnCopy and 1 or 0, true)
     ImGui.SetHelpmarker(cmbLogId, 'On copy: also log to file')
+    
+    local isDecimal = false
+    local isPaused = false
+    local rand = Random()
+    local rng = RNG(rand <= 0 and 1 or rand, mod.rngShiftIdx)
+    local randomVals = {}
+    for i = 1, 100 do
+      -- the plot control rounds to 4 digits, keep it consistent
+      table.insert(randomVals, isDecimal and mod:round(rng:RandomFloat(), 4) or (rng:RandomFloat() < 0.5 and 0 or 1))
+    end
+    ImGui.AddPlotLines(tab, plotRandId, isDecimal and 'Decimal' or 'Binary', randomVals, '', 0, 1, nil) -- 40
+    ImGui.AddCallback(plotRandId, ImGuiCallback.Clicked, function()
+      isDecimal = not isDecimal
+      ImGui.UpdateData(plotRandId, ImGuiData.Label, isDecimal and 'Decimal' or 'Binary')
+    end)
+    ImGui.AddCallback(plotRandId, ImGuiCallback.Render, function()
+      isPaused = false
+    end)
+    ImGui.AddCallback(plotRandId, ImGuiCallback.Hovered, function()
+      isPaused = true
+    end)
+    ImGui.AddCallback(plotRandId, ImGuiCallback.Visible, function()
+      if not isPaused then -- Isaac.GetFrameCount() % 2 == 0
+        table.remove(randomVals, 1)
+        table.insert(randomVals, isDecimal and mod:round(rng:RandomFloat(), 4) or (rng:RandomFloat() < 0.5 and 0 or 1))
+        ImGui.UpdateData(plotRandId, ImGuiData.ListValues, randomVals)
+      end
+    end)
+    ImGui.SetHelpmarker(plotRandId, 'On click: binary <-> decimal\nOn hover: pause scroll')
+    ImGui.AddElement(tab, '', ImGuiElement.SameLine, '')
+    ImGui.AddButton(tab, btnCopyId, '\u{f0c5}', function()
+      if Isaac.SetClipboard(mod:makeSafeToCopy(table.concat(randomVals, ' '))) then
+        ImGui.PushNotification('Copied results to clipboard', ImGuiNotificationType.INFO, 5000)
+      end
+    end, false)
+    ImGui.SetTooltip(btnCopyId, 'Copy')
   end
   
   mod:AddCallback(ModCallbacks.MC_MAIN_MENU_RENDER, mod.onRender)

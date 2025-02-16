@@ -8,7 +8,7 @@
 Arbitrary randomness is now at your fingertips. Flip a coin, choose a direction, or roll a dice all the way up to a D100.
 
 Note: Copying with the icon setting is currently broken. The text gets garbled in the clipboard. This has been fixed on github and should be in the next repentogon release. Logging to file works correctly. The log file is located here: C:\Users\username\Documents\My Games\Binding of Isaac Repentance\log.txt</description>
-    <version>1.2</version>
+    <version>1.3</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
 </metadata>
