@@ -1,7 +1,7 @@
 local mod = RegisterMod('Dice Shenanigans', 1)
+mod.rngShiftIdx = 35
 
 if REPENTOGON then
-  mod.rngShiftIdx = 35
   mod.useIconsOnCopy = false
   mod.logToFileOnCopy = false
   
@@ -402,4 +402,130 @@ if REPENTOGON then
   
   mod:AddCallback(ModCallbacks.MC_MAIN_MENU_RENDER, mod.onRender)
   mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
+end
+
+-- start ModConfigMenu --
+function mod:setupModConfigMenu()
+  local startAtZero = false
+  local sides = 20
+  local num = 1
+  local results = { '', '', '', '', '' }
+  for _, v in ipairs({ 'Dice' }) do
+    ModConfigMenu.RemoveSubcategory(mod.Name, v)
+  end
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Dice',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return startAtZero
+      end,
+      Display = function()
+        return 'Start at: ' .. (startAtZero and 0 or 1)
+      end,
+      OnChange = function(b)
+        startAtZero = b
+      end,
+      Info = { 'Start at 0 or 1' }
+    }
+  )
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Dice',
+    {
+      Type = ModConfigMenu.OptionType.NUMBER,
+      CurrentSetting = function()
+        return sides
+      end,
+      Minimum = 1,
+      Maximum = 100,
+      Display = function()
+        return 'Sides: ' .. sides
+      end,
+      OnChange = function(n)
+        sides = n
+      end,
+      Info = { 'D1 - D100' }
+    }
+  )
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Dice',
+    {
+      Type = ModConfigMenu.OptionType.NUMBER,
+      CurrentSetting = function()
+        return num
+      end,
+      Minimum = 1,
+      Maximum = 50,
+      Display = function()
+        return 'Num rolls: ' .. num
+      end,
+      OnChange = function(n)
+        num = n
+      end,
+      Info = { '1 - 50' }
+    }
+  )
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Dice',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return false
+      end,
+      Display = function()
+        return 'Roll Dice'
+      end,
+      OnChange = function(b)
+        local rand = Random()
+        local rng = RNG()
+        rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
+        local tempResults = {}
+        
+        for i = 1, num do
+          table.insert(tempResults, rng:RandomInt(sides) + (startAtZero and 0 or 1))
+        end
+        
+        -- this doesn't word-wrap
+        local perRow = 10
+        for i = 1, 5 do
+          local maxNum = i * perRow
+          results[i] = table.concat({ table.unpack(tempResults, maxNum - (perRow - 1), maxNum) }, ' ')
+        end
+      end,
+      Info = { ':)' }
+    }
+  )
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Dice',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return false
+      end,
+      Display = function()
+        return 'Clear'
+      end,
+      OnChange = function(b)
+        for i = 1, 5 do
+          results[i] = ''
+        end
+      end,
+      Info = { ':)' }
+    }
+  )
+  for i = 1, 5 do
+    ModConfigMenu.AddText(mod.Name, 'Dice', function()
+      return results[i]
+    end)
+  end
+end
+-- end ModConfigMenu --
+
+if ModConfigMenu then
+  mod:setupModConfigMenu()
 end
