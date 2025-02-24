@@ -1,4 +1,7 @@
 local mod = RegisterMod('Dice Shenanigans', 1)
+local game = Game()
+
+mod.handleFloorDice = false
 mod.rngShiftIdx = 35
 
 if REPENTOGON then
@@ -257,6 +260,28 @@ if REPENTOGON then
       ImGui.UpdateText(txtResultsId, results)
       mod:removeProgressBars(progressBars)
     end, false)
+    if tab == 'shenanigansTabDiceD6' then
+      ImGui.AddElement(tab, '', ImGuiElement.SameLine, '')
+      ImGui.AddButton(tab, btnId .. 'Floor', '\u{f11b}', function()
+        if Isaac.IsInGame() then
+          local rand = Random()
+          local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
+          if roomConfig then
+            if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
+              mod.handleFloorDice = true
+              ImGui.Hide()
+            else
+              ImGui.PushNotification('Unable to move to dice room', ImGuiNotificationType.ERROR, 5000)
+            end
+          else
+            ImGui.PushNotification('No dice rooms found in the current game mode', ImGuiNotificationType.ERROR, 5000)
+          end
+        else
+          ImGui.PushNotification('Start a run to access dice rooms', ImGuiNotificationType.ERROR, 5000)
+        end
+      end, false)
+      ImGui.SetTooltip(btnId .. 'Floor', 'Roll floor dice (must be in a run)')
+    end
     ImGui.AddText(tab, '', true, txtResultsId)
     ImGui.AddElement(tab, treeStatsId, ImGuiElement.TreeNode, 'Stats')
     ImGui.AddCallback(treeStatsId, ImGuiCallback.Render, function() -- ToggledOpen exists, but there's no ToggledClose
@@ -402,6 +427,113 @@ if REPENTOGON then
   
   mod:AddCallback(ModCallbacks.MC_MAIN_MENU_RENDER, mod.onRender)
   mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
+  
+  Console.RegisterCommand('dice-shenanigans', 'Wrapper for goto, use with s.dice', 'Wrapper for goto, use with s.dice', false, AutocompleteType.GOTO)
+end
+
+function mod:onGameExit()
+  mod.handleFloorDice = false
+end
+
+function mod:onPreSpawnAward()
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetCurrentRoomDesc()
+  
+  if room:GetType() == RoomType.ROOM_DICE and roomDesc.GridIndex == GridRooms.ROOM_DEBUG_IDX then
+    for _, v in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.DICE_FLOOR, -1, false, false)) do
+      if v.SubType >= 1000 and v.SubType <= 1005 then
+        return true -- stop spawn after removing entities that can shut doors
+      end
+    end
+  end
+end
+
+-- filtered to DICE_FLOOR
+function mod:onEffectUpdate(effect)
+  local level = game:GetLevel()
+  local room = level:GetCurrentRoom()
+  local roomDesc = level:GetRoomByIdx(level:GetCurrentRoomIndex(), -1) -- read/write
+  
+  if room:GetType() == RoomType.ROOM_DICE and roomDesc.GridIndex == GridRooms.ROOM_DEBUG_IDX then
+    if mod.handleFloorDice then
+      if effect.SubType >= 0 and effect.SubType <= 5 then
+        effect.SubType = effect.SubType + 1000 -- arbitrary addition so the game doesn't trigger the normal effect
+        mod:hideInfoFromSprite(effect:GetSprite())
+        mod:removeEntitiesFromRoom()
+      end
+    elseif effect.SubType >= 1000 and effect.SubType <= 1005 then
+      if game:GetScreenShakeCountdown() > 0 then -- GetDarknessModifier
+        if game:GetScreenShakeCountdown() % 4 == 0 then -- effect.FrameCount
+          local rand = Random()
+          local rng = RNG()
+          rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
+          local subType = rng:RandomInt(6) -- 0-5
+          local sprite = effect:GetSprite()
+          effect.SubType = subType + 1000
+          sprite:Play(tostring(subType + 1), true)
+          mod:hideInfoFromSprite(sprite)
+        end
+      elseif roomDesc.Flags & RoomDescriptor.FLAG_SACRIFICE_DONE == RoomDescriptor.FLAG_SACRIFICE_DONE and
+             #Isaac.FindInRadius(room:GetCenterPos(), 100, EntityPartition.PLAYER) <= 0 -- or touching grid idx: 36-38, 51-53, 66-68, 81-83
+      then
+        roomDesc.Flags = roomDesc.Flags & ~RoomDescriptor.FLAG_SACRIFICE_DONE -- allow the dice to be rolled again
+      end
+    end
+  end
+  
+  mod.handleFloorDice = false
+end
+
+-- usage: dice-shenanigans s.dice
+-- usage: dice-shenanigans s.dice.0
+function mod:onExecuteCmd(cmd, parameters)
+  cmd = string.lower(cmd)
+  
+  if cmd == 'dice-shenanigans' then
+    local output = Isaac.ExecuteCommand('goto ' .. parameters)
+    if output == 'Changed room.' then
+      local paramPrefix = string.sub(parameters, 1, 6)
+      if paramPrefix == 's.dice' or paramPrefix == 'x.dice' then
+        mod.handleFloorDice = true
+      end
+    end
+    print(output)
+  end
+end
+
+function mod:hideInfoFromSprite(sprite)
+  if REPENTOGON then
+    for _, v in ipairs({ 'Info', 'Info2', 'Info3' }) do
+      local layer = sprite:GetLayer(v)
+      if layer then
+        layer:SetVisible(false)
+      end
+    end
+  end
+end
+
+function mod:removeEntitiesFromRoom()
+  for _, v in ipairs(Isaac.GetRoomEntities()) do
+    if v.Type == EntityType.ENTITY_PICKUP or v:CanShutDoors() then -- IsEnemy
+      v:Remove()
+    end
+  end
+end
+
+function mod:setupEid()
+  EID:addDescriptionModifier(mod.Name, function(descObj)
+    local level = game:GetLevel()
+    local room = level:GetCurrentRoom()
+    local roomDesc = level:GetCurrentRoomDesc()
+    return room:GetType() == RoomType.ROOM_DICE and roomDesc.GridIndex == GridRooms.ROOM_DEBUG_IDX and
+           descObj.ObjType == EntityType.ENTITY_EFFECT and descObj.ObjVariant == EffectVariant.DICE_FLOOR and
+           descObj.ObjSubType >= 1001 and descObj.ObjSubType <= 1006 -- +1
+  end, function(descObj)
+    descObj = EID:getDescriptionObj(descObj.ObjType, descObj.ObjVariant, descObj.ObjSubType - 1000, descObj.Entity)
+    descObj.Description = '#No floor effect'
+    return descObj
+  end)
 end
 
 -- start ModConfigMenu --
@@ -410,7 +542,7 @@ function mod:setupModConfigMenu()
   local sides = 20
   local num = 1
   local results = { '', '', '', '', '' }
-  for _, v in ipairs({ 'Dice' }) do
+  for _, v in ipairs({ 'Dice', 'Floor' }) do
     ModConfigMenu.RemoveSubcategory(mod.Name, v)
   end
   ModConfigMenu.AddSetting(
@@ -523,9 +655,48 @@ function mod:setupModConfigMenu()
       return results[i]
     end)
   end
+  ModConfigMenu.AddSetting(
+    mod.Name,
+    'Floor',
+    {
+      Type = ModConfigMenu.OptionType.BOOLEAN,
+      CurrentSetting = function()
+        return false
+      end,
+      Display = function()
+        return 'Roll floor dice'
+      end,
+      OnChange = function(b)
+        if REPENTOGON then
+          local rand = Random()
+          local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
+          if roomConfig then
+            if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
+              mod.handleFloorDice = true
+              ModConfigMenu.CloseConfigMenu()
+            end
+          end
+        else -- this mod adds a dice room to greed mode
+          if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
+            mod.handleFloorDice = true
+            ModConfigMenu.CloseConfigMenu()
+          end
+        end
+      end,
+      Info = { ':)' }
+    }
+  )
 end
 -- end ModConfigMenu --
 
+mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.onGameExit)
+mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.onPreSpawnAward)
+mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, mod.onEffectUpdate, EffectVariant.DICE_FLOOR)
+mod:AddCallback(ModCallbacks.MC_EXECUTE_CMD, mod.onExecuteCmd)
+
+if EID then
+  mod:setupEid()
+end
 if ModConfigMenu then
   mod:setupModConfigMenu()
 end
