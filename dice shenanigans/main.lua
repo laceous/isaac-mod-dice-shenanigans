@@ -1,7 +1,7 @@
 local mod = RegisterMod('Dice Shenanigans', 1)
 local game = Game()
 
-mod.handleFloorDice = false
+mod.handleDiceFloor = false
 mod.rngShiftIdx = 35
 
 if REPENTOGON then
@@ -268,7 +268,7 @@ if REPENTOGON then
           local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
           if roomConfig then
             if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
-              mod.handleFloorDice = true
+              mod.handleDiceFloor = true
               ImGui.Hide()
             else
               ImGui.PushNotification('Unable to move to dice room', ImGuiNotificationType.ERROR, 5000)
@@ -280,7 +280,7 @@ if REPENTOGON then
           ImGui.PushNotification('Start a run to access dice rooms', ImGuiNotificationType.ERROR, 5000)
         end
       end, false)
-      ImGui.SetTooltip(btnId .. 'Floor', 'Roll floor dice (must be in a run)')
+      ImGui.SetTooltip(btnId .. 'Floor', 'Roll dice floor (must be in a run)')
     end
     ImGui.AddText(tab, '', true, txtResultsId)
     ImGui.AddElement(tab, treeStatsId, ImGuiElement.TreeNode, 'Stats')
@@ -432,7 +432,7 @@ if REPENTOGON then
 end
 
 function mod:onGameExit()
-  mod.handleFloorDice = false
+  mod.handleDiceFloor = false
 end
 
 function mod:onPreSpawnAward()
@@ -456,7 +456,7 @@ function mod:onEffectUpdate(effect)
   local roomDesc = level:GetRoomByIdx(level:GetCurrentRoomIndex(), -1) -- read/write
   
   if room:GetType() == RoomType.ROOM_DICE and roomDesc.GridIndex == GridRooms.ROOM_DEBUG_IDX then
-    if mod.handleFloorDice then
+    if mod.handleDiceFloor then
       if effect.SubType >= 0 and effect.SubType <= 5 then
         effect.SubType = effect.SubType + 1000 -- arbitrary addition so the game doesn't trigger the normal effect
         mod:hideInfoFromSprite(effect:GetSprite())
@@ -482,7 +482,7 @@ function mod:onEffectUpdate(effect)
     end
   end
   
-  mod.handleFloorDice = false
+  mod.handleDiceFloor = false
 end
 
 -- usage: dice-shenanigans s.dice
@@ -495,7 +495,7 @@ function mod:onExecuteCmd(cmd, parameters)
     if output == 'Changed room.' then
       local paramPrefix = string.sub(parameters, 1, 6)
       if paramPrefix == 's.dice' or paramPrefix == 'x.dice' then
-        mod.handleFloorDice = true
+        mod.handleDiceFloor = true
       end
     end
     print(output)
@@ -664,7 +664,7 @@ function mod:setupModConfigMenu()
         return false
       end,
       Display = function()
-        return 'Roll floor dice'
+        return 'Roll dice floor'
       end,
       OnChange = function(b)
         if REPENTOGON then
@@ -672,13 +672,13 @@ function mod:setupModConfigMenu()
           local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
           if roomConfig then
             if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
-              mod.handleFloorDice = true
+              mod.handleDiceFloor = true
               ModConfigMenu.CloseConfigMenu()
             end
           end
         else -- this mod adds a dice room to greed mode
           if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
-            mod.handleFloorDice = true
+            mod.handleDiceFloor = true
             ModConfigMenu.CloseConfigMenu()
           end
         end
