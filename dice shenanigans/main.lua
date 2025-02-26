@@ -264,17 +264,11 @@ if REPENTOGON then
       ImGui.AddElement(tab, '', ImGuiElement.SameLine, '')
       ImGui.AddButton(tab, btnId .. 'Floor', '\u{f11b}', function()
         if Isaac.IsInGame() then
-          local rand = Random()
-          local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
-          if roomConfig then
-            if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
-              mod.handleDiceFloor = true
-              ImGui.Hide()
-            else
-              ImGui.PushNotification('Unable to move to dice room', ImGuiNotificationType.ERROR, 5000)
-            end
+          if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
+            mod.handleDiceFloor = true
+            ImGui.Hide()
           else
-            ImGui.PushNotification('No dice rooms found in the current game mode', ImGuiNotificationType.ERROR, 5000)
+            ImGui.PushNotification('Unable to move to dice room', ImGuiNotificationType.ERROR, 5000)
           end
         else
           ImGui.PushNotification('Start a run to access dice rooms', ImGuiNotificationType.ERROR, 5000)
@@ -468,7 +462,9 @@ function mod:onEffectUpdate(effect)
           local rand = Random()
           local rng = RNG()
           rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
-          local subType = rng:RandomInt(6) -- 0-5
+          local subTypes = { 0, 1, 2, 3, 4, 5 }
+          table.remove(subTypes, effect.SubType - 1000 + 1) -- don't re-roll to the same number
+          local subType = subTypes[rng:RandomInt(#subTypes) + 1]
           local sprite = effect:GetSprite()
           effect.SubType = subType + 1000
           sprite:Play(tostring(subType + 1), true)
@@ -514,9 +510,34 @@ function mod:hideInfoFromSprite(sprite)
 end
 
 function mod:removeEntitiesFromRoom()
+  local room = game:GetRoom()
+  
+  for i = 0, room:GetGridSize() - 1 do
+    local gridEntity = room:GetGridEntity(i)
+    if gridEntity then
+      local geType = gridEntity:GetType()
+      if geType ~= GridEntityType.GRID_DECORATION and geType ~= GridEntityType.GRID_WALL and geType ~= GridEntityType.GRID_DOOR then
+        mod:removeGridEntity(i, 0, false, false)
+      end
+    end
+  end
+  
   for _, v in ipairs(Isaac.GetRoomEntities()) do
-    if v.Type == EntityType.ENTITY_PICKUP or v:CanShutDoors() then -- IsEnemy
+    if v.Type == EntityType.ENTITY_PICKUP or v:CanShutDoors() or v:IsEnemy() then
       v:Remove()
+    end
+  end
+end
+
+function mod:removeGridEntity(gridIdx, pathTrail, keepDecoration, update)
+  local room = game:GetRoom()
+  
+  if REPENTOGON then
+    room:RemoveGridEntityImmediate(gridIdx, pathTrail, keepDecoration)
+  else
+    room:RemoveGridEntity(gridIdx, pathTrail, keepDecoration)
+    if update then
+      room:Update()
     end
   end
 end
@@ -667,20 +688,10 @@ function mod:setupModConfigMenu()
         return 'Roll dice floor'
       end,
       OnChange = function(b)
-        if REPENTOGON then
-          local rand = Random()
-          local roomConfig = RoomConfigHolder.GetRandomRoom(rand <= 0 and 1 or rand, false, StbType.SPECIAL_ROOMS, RoomType.ROOM_DICE, RoomShape.ROOMSHAPE_1x1, 0, -1, 0, 10, 0, -1, -1)
-          if roomConfig then
-            if Isaac.ExecuteCommand('goto s.dice.' .. roomConfig.Variant) == 'Changed room.' then
-              mod.handleDiceFloor = true
-              ModConfigMenu.CloseConfigMenu()
-            end
-          end
-        else -- this mod adds a dice room to greed mode
-          if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
-            mod.handleDiceFloor = true
-            ModConfigMenu.CloseConfigMenu()
-          end
+        -- this mod adds a dice room to greed mode
+        if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
+          mod.handleDiceFloor = true
+          ModConfigMenu.CloseConfigMenu()
         end
       end,
       Info = { ':)' }
