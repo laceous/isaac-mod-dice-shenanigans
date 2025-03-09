@@ -13,7 +13,7 @@ Note: Copying with the icon setting is currently broken. The text gets garbled i
 Update: Basic support for Mod Config Menu has been added. If you don't have repentogon then you can use MCM instead.
 
 Update x2: You can now roll the dice floor in a dice room that's off the grid. Just start a new run, and select the option in ImGui or MCM.</description>
-    <version>1.7</version>
+    <version>1.8</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>

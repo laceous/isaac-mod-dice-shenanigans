@@ -562,7 +562,7 @@ function mod:setupModConfigMenu()
   local startAtZero = false
   local sides = 20
   local num = 1
-  local results = { '', '', '', '', '' }
+  local results = { '', '', '', '', '', '' }
   for _, v in ipairs({ 'Dice', 'Floor' }) do
     ModConfigMenu.RemoveSubcategory(mod.Name, v)
   end
@@ -611,67 +611,56 @@ function mod:setupModConfigMenu()
         return num
       end,
       Minimum = 1,
-      Maximum = 50,
+      Maximum = 60,
       Display = function()
         return 'Num rolls: ' .. num
       end,
       OnChange = function(n)
         num = n
       end,
-      Info = { '1 - 50' }
+      Info = { '1 - 60' }
     }
   )
   ModConfigMenu.AddSetting(
     mod.Name,
     'Dice',
     {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
+      Type = ModConfigMenu.OptionType.NUMBER,
       CurrentSetting = function()
-        return false
+        return 2
       end,
+      Minimum = 1,
+      Maximum = 3,
       Display = function()
         return 'Roll Dice'
       end,
-      OnChange = function(b)
-        local rand = Random()
-        local rng = RNG()
-        rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
-        local tempResults = {}
-        
-        for i = 1, num do
-          table.insert(tempResults, rng:RandomInt(sides) + (startAtZero and 0 or 1))
-        end
-        
-        -- this doesn't word-wrap
-        local perRow = 10
-        for i = 1, 5 do
-          local maxNum = i * perRow
-          results[i] = table.concat({ table.unpack(tempResults, maxNum - (perRow - 1), maxNum) }, ' ')
+      OnChange = function(n)
+        if n == 1 then
+          for i = 1, 6 do
+            results[i] = ''
+          end
+        else -- 3
+          local rand = Random()
+          local rng = RNG()
+          rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
+          local tempResults = {}
+          
+          for i = 1, num do
+            table.insert(tempResults, rng:RandomInt(sides) + (startAtZero and 0 or 1))
+          end
+          
+          -- this doesn't word-wrap
+          local perRow = 10
+          for i = 1, 6 do
+            local maxNum = i * perRow
+            results[i] = table.concat({ table.unpack(tempResults, maxNum - (perRow - 1), maxNum) }, ' ')
+          end
         end
       end,
-      Info = { ':)' }
+      Info = { 'Roll dice: select / right', 'Clear: left' }
     }
   )
-  ModConfigMenu.AddSetting(
-    mod.Name,
-    'Dice',
-    {
-      Type = ModConfigMenu.OptionType.BOOLEAN,
-      CurrentSetting = function()
-        return false
-      end,
-      Display = function()
-        return 'Clear'
-      end,
-      OnChange = function(b)
-        for i = 1, 5 do
-          results[i] = ''
-        end
-      end,
-      Info = { ':)' }
-    }
-  )
-  for i = 1, 5 do
+  for i = 1, 6 do
     ModConfigMenu.AddText(mod.Name, 'Dice', function()
       return results[i]
     end)
