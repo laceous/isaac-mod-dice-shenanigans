@@ -824,5 +824,6 @@ if REPENTANCE_PLUS then
   
   mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.clearEmoteData)
   mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.clearEmoteData)
-  mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRenderEmote) -- MC_POST_PLAYER_RENDER is closer to how online works, but numbers are hard to read in mirror dimension
+  mod:AddPriorityCallback(ModCallbacks.MC_POST_RENDER, CallbackPriority.EARLY, mod.onRenderEmote) -- display under mcm
+  -- MC_POST_PLAYER_RENDER is closer to how online works, but numbers are hard to read in mirror dimension and reflections have issues
 end
