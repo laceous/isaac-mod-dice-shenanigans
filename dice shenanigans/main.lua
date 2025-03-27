@@ -700,3 +700,129 @@ end
 if ModConfigMenu then
   mod:setupModConfigMenu()
 end
+
+if REPENTANCE_PLUS then
+  mod.emote = {}
+  mod.emote.sprite = Sprite()
+  mod.emote.players = {}
+  mod.emote.frame = nil
+  mod.emote.type = nil
+  
+  function mod:clearEmoteData()
+    mod.emote.players = {}
+    mod.emote.frame = nil
+    mod.emote.type = nil
+  end
+  
+  function mod:onRenderEmote()
+    local keyboard = 0
+    if Input.IsButtonPressed(Keyboard.KEY_LEFT_ALT, keyboard) or Input.IsButtonPressed(Keyboard.KEY_RIGHT_ALT, keyboard) then
+      if Input.IsButtonTriggered(Keyboard.KEY_1, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_1, keyboard) then
+        mod:clearEmoteData()
+        mod.emote.type = 1
+        mod.emote.frame = game:GetFrameCount()
+      elseif Input.IsButtonTriggered(Keyboard.KEY_2, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_2, keyboard) then
+        mod:clearEmoteData()
+        mod.emote.type = 2
+        mod.emote.frame = game:GetFrameCount()
+      elseif Input.IsButtonTriggered(Keyboard.KEY_3, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_3, keyboard) then
+        mod:clearEmoteData()
+        mod.emote.type = 3
+        mod.emote.frame = game:GetFrameCount()
+      elseif Input.IsButtonTriggered(Keyboard.KEY_4, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_4, keyboard) then
+        mod:clearEmoteData()
+        mod.emote.type = 4
+        mod.emote.frame = game:GetFrameCount()
+      end
+    end
+    
+    if not mod.emote.type then
+      return
+    end
+    
+    if game:GetFrameCount() >= mod.emote.frame + (4 * 30) then -- 4 seconds (online is roughly 2 seconds)
+      mod:clearEmoteData()
+      return
+    end
+    
+    if not mod.emote.sprite:IsLoaded() then
+      mod.emote.sprite:Load('gfx/onlineemotes.anm2', true)
+    end
+    
+    local room = game:GetRoom()
+    local rand = Random()
+    local rng = RNG()
+    rng:SetSeed(rand <= 0 and 1 or rand, mod.rngShiftIdx)
+    
+    for i = 0, game:GetNumPlayers() - 1 do
+      local player = game:GetPlayer(i)
+      local playerHash = GetPtrHash(player)
+      local playerPos = Isaac.WorldToScreen(player.Position)
+      if room:IsMirrorWorld() then
+        local wtrp320x280 = Isaac.WorldToRenderPosition(Vector(320, 280)) -- center pos normal room, WorldToRenderPosition makes this work in large rooms too
+        playerPos.X = wtrp320x280.X*2 - playerPos.X
+      end
+      playerPos.Y = playerPos.Y - 52 -- better way to do this?
+      
+      if mod.emote.type == 1 then -- coin flip
+        if not mod.emote.players[playerHash] or (mod.emote.players[playerHash][3] <= 10 and Isaac.GetFrameCount() % 2 == 0) then
+          local options = { 'ThumbsUp', 'ThumbsDown' }
+          if mod.emote.players[playerHash] then
+            if mod.emote.players[playerHash][1] == 'ThumbsUp' then
+              table.remove(options, 1)
+            else -- ThumbsDown
+              table.remove(options, 2)
+            end
+          end
+          local count = mod.emote.players[playerHash] and mod.emote.players[playerHash][3] or 0
+          mod.emote.players[playerHash] = { options[rng:RandomInt(#options) + 1], 0, count + 1 }
+        end
+      elseif mod.emote.type == 2 then -- direction
+        if not mod.emote.players[playerHash] or (mod.emote.players[playerHash][3] <= 10 and Isaac.GetFrameCount() % 2 == 0) then
+          local options = { 'Left', 'Right', 'Up', 'Down' }
+          if mod.emote.players[playerHash] then
+            if mod.emote.players[playerHash][1] == 'Left' then
+              table.remove(options, 1)
+            elseif mod.emote.players[playerHash][1] == 'Right' then
+              table.remove(options, 2)
+            elseif mod.emote.players[playerHash][1] == 'Up' then
+              table.remove(options, 3)
+            else -- Down
+              table.remove(options, 4)
+            end
+          end
+          local count = mod.emote.players[playerHash] and mod.emote.players[playerHash][3] or 0
+          mod.emote.players[playerHash] = { options[rng:RandomInt(#options) + 1], 0, count + 1 }
+        end
+      elseif mod.emote.type == 3 then -- d6
+        if not mod.emote.players[playerHash] then
+          mod.emote.players[playerHash] = { 'D6Roll', 0 }
+        elseif mod.emote.players[playerHash][1] == 'D6Roll' then
+          mod.emote.players[playerHash][2] = mod.emote.players[playerHash][2] + 1
+          mod.emote.sprite:SetOverlayFrame(mod.emote.players[playerHash][1], mod.emote.players[playerHash][2])
+          if mod.emote.sprite:GetOverlayFrame() < mod.emote.players[playerHash][2] then
+            mod.emote.players[playerHash] = { 'D6Result', rng:RandomInt(6) }
+          end
+        end
+      else -- 4 / d20
+        if not mod.emote.players[playerHash] then
+          mod.emote.players[playerHash] = { 'D20Roll', 0 }
+        elseif mod.emote.players[playerHash][1] == 'D20Roll' then
+          mod.emote.players[playerHash][2] = mod.emote.players[playerHash][2] + 1
+          mod.emote.sprite:SetOverlayFrame(mod.emote.players[playerHash][1], mod.emote.players[playerHash][2])
+          if mod.emote.sprite:GetOverlayFrame() < mod.emote.players[playerHash][2] then
+            mod.emote.players[playerHash] = { 'D20Result', rng:RandomInt(20) }
+          end
+        end
+      end
+      
+      mod.emote.sprite:SetFrame('Bubble', 0)
+      mod.emote.sprite:SetOverlayFrame(mod.emote.players[playerHash][1], mod.emote.players[playerHash][2])
+      mod.emote.sprite:Render(playerPos)
+    end
+  end
+  
+  mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.clearEmoteData)
+  mod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, mod.clearEmoteData)
+  mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRenderEmote) -- MC_POST_PLAYER_RENDER is closer to how online works, but numbers are hard to read in mirror dimension
+end
