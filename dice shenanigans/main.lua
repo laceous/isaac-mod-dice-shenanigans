@@ -715,24 +715,26 @@ if REPENTANCE_PLUS then
   end
   
   function mod:onRenderEmote()
-    local keyboard = 0
-    if Input.IsButtonPressed(Keyboard.KEY_LEFT_ALT, keyboard) or Input.IsButtonPressed(Keyboard.KEY_RIGHT_ALT, keyboard) then
-      if Input.IsButtonTriggered(Keyboard.KEY_1, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_1, keyboard) then
-        mod:clearEmoteData()
-        mod.emote.type = 1
-        mod.emote.frame = game:GetFrameCount()
-      elseif Input.IsButtonTriggered(Keyboard.KEY_2, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_2, keyboard) then
-        mod:clearEmoteData()
-        mod.emote.type = 2
-        mod.emote.frame = game:GetFrameCount()
-      elseif Input.IsButtonTriggered(Keyboard.KEY_3, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_3, keyboard) then
-        mod:clearEmoteData()
-        mod.emote.type = 3
-        mod.emote.frame = game:GetFrameCount()
-      elseif Input.IsButtonTriggered(Keyboard.KEY_4, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_4, keyboard) then
-        mod:clearEmoteData()
-        mod.emote.type = 4
-        mod.emote.frame = game:GetFrameCount()
+    if not game:IsPaused() then
+      local keyboard = 0
+      if Input.IsButtonPressed(Keyboard.KEY_LEFT_ALT, keyboard) or Input.IsButtonPressed(Keyboard.KEY_RIGHT_ALT, keyboard) then
+        if Input.IsButtonTriggered(Keyboard.KEY_1, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_1, keyboard) then
+          mod:clearEmoteData()
+          mod.emote.type = 1
+          mod.emote.frame = game:GetFrameCount()
+        elseif Input.IsButtonTriggered(Keyboard.KEY_2, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_2, keyboard) then
+          mod:clearEmoteData()
+          mod.emote.type = 2
+          mod.emote.frame = game:GetFrameCount()
+        elseif Input.IsButtonTriggered(Keyboard.KEY_3, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_3, keyboard) then
+          mod:clearEmoteData()
+          mod.emote.type = 3
+          mod.emote.frame = game:GetFrameCount()
+        elseif Input.IsButtonTriggered(Keyboard.KEY_4, keyboard) or Input.IsButtonTriggered(Keyboard.KEY_KP_4, keyboard) then
+          mod:clearEmoteData()
+          mod.emote.type = 4
+          mod.emote.frame = game:GetFrameCount()
+        end
       end
     end
     
