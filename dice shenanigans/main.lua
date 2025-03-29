@@ -759,12 +759,12 @@ if REPENTANCE_PLUS then
     for i = 0, game:GetNumPlayers() - 1 do
       local player = game:GetPlayer(i)
       local playerHash = GetPtrHash(player)
-      local playerPos = Isaac.WorldToScreen(player.Position)
+      local playerPos = Isaac.WorldToScreen(player.Position) + player:GetFlyingOffset()
       if room:IsMirrorWorld() then
         local wtrp320x280 = Isaac.WorldToRenderPosition(Vector(320, 280)) -- center pos normal room, WorldToRenderPosition makes this work in large rooms too
         playerPos.X = wtrp320x280.X*2 - playerPos.X
       end
-      playerPos.Y = playerPos.Y - 52 -- better way to do this?
+      playerPos.Y = playerPos.Y - 52 -- better way to do this? scale?
       
       if mod.emote.type == 1 then -- coin flip
         if not mod.emote.players[playerHash] or (mod.emote.players[playerHash][3] <= 10 and Isaac.GetFrameCount() % 2 == 0) then
