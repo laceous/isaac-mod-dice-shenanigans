@@ -15,7 +15,7 @@ Update: Basic support for Mod Config Menu has been added. If you don't have repe
 Update x2: You can now roll the dice floor in a dice room that's off the grid. Just start a new run, and select the option in ImGui or MCM.
 
 Update x3: On Rep+, you can now roll the online emotes in offline mode with: alt+1 (coin flip), alt+2 (direction), alt+3 (d6), alt+4 (d20)</description>
-    <version>1.13</version>
+    <version>1.14</version>
     <visibility>Public</visibility>
     <tag id="Lua"/>
     <tag id="Rooms"/>

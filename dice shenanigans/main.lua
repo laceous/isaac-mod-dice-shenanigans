@@ -265,6 +265,7 @@ if REPENTOGON then
       ImGui.AddButton(tab, btnId .. 'Floor', '\u{f11b}', function()
         if Isaac.IsInGame() then
           if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
+            mod:resetDebugRoomFlags()
             mod.handleDiceFloor = true
             ImGui.Hide()
           else
@@ -429,20 +430,6 @@ function mod:onGameExit()
   mod.handleDiceFloor = false
 end
 
-function mod:onPreSpawnAward()
-  local level = game:GetLevel()
-  local room = level:GetCurrentRoom()
-  local roomDesc = level:GetCurrentRoomDesc()
-  
-  if room:GetType() == RoomType.ROOM_DICE and roomDesc.GridIndex == GridRooms.ROOM_DEBUG_IDX then
-    for _, v in ipairs(Isaac.FindByType(EntityType.ENTITY_EFFECT, EffectVariant.DICE_FLOOR, -1, false, false)) do
-      if v.SubType >= 1000 and v.SubType <= 1005 then
-        return true -- stop spawn after removing entities that can shut doors
-      end
-    end
-  end
-end
-
 -- filtered to DICE_FLOOR
 function mod:onEffectUpdate(effect)
   local level = game:GetLevel()
@@ -491,11 +478,18 @@ function mod:onExecuteCmd(cmd, parameters)
     if output == 'Changed room.' then
       local paramPrefix = string.sub(parameters, 1, 6)
       if paramPrefix == 's.dice' or paramPrefix == 'x.dice' then
+        mod:resetDebugRoomFlags()
         mod.handleDiceFloor = true
       end
     end
     print(output)
   end
+end
+
+function mod:resetDebugRoomFlags()
+  local level = game:GetLevel()
+  local dbgRoom = level:GetRoomByIdx(GridRooms.ROOM_DEBUG_IDX, -1)
+  dbgRoom.Flags = RoomDescriptor.FLAG_NO_REWARD
 end
 
 function mod:hideInfoFromSprite(sprite)
@@ -679,6 +673,7 @@ function mod:setupModConfigMenu()
       OnChange = function(b)
         -- this mod adds a dice room to greed mode
         if Isaac.ExecuteCommand('goto s.dice') == 'Changed room.' then
+          mod:resetDebugRoomFlags()
           mod.handleDiceFloor = true
           ModConfigMenu.CloseConfigMenu()
         end
@@ -690,7 +685,6 @@ end
 -- end ModConfigMenu --
 
 mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.onGameExit)
-mod:AddCallback(ModCallbacks.MC_PRE_SPAWN_CLEAN_AWARD, mod.onPreSpawnAward)
 mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, mod.onEffectUpdate, EffectVariant.DICE_FLOOR)
 mod:AddCallback(ModCallbacks.MC_EXECUTE_CMD, mod.onExecuteCmd)
 
