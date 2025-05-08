@@ -8,9 +8,7 @@ if REPENTOGON then
   mod.useIconsOnCopy = false
   mod.logToFileOnCopy = false
   
-  function mod:onRender()
-    mod:RemoveCallback(ModCallbacks.MC_MAIN_MENU_RENDER, mod.onRender)
-    mod:RemoveCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
+  function mod:onModsLoaded()
     mod:setupImGui()
   end
   
@@ -131,10 +129,13 @@ if REPENTOGON then
     return s
   end
   
-  function mod:setupImGui()
+  function mod:setupImGuiMenu()
     if not ImGui.ElementExists('shenanigansMenu') then
       ImGui.CreateMenu('shenanigansMenu', '\u{f6d1} Shenanigans')
     end
+  end
+  
+  function mod:setupImGui()
     ImGui.AddElement('shenanigansMenu', 'shenanigansMenuItemDice', ImGuiElement.MenuItem, '\u{f522} Dice Shenanigans')
     ImGui.CreateWindow('shenanigansWindowDice', 'Dice Shenanigans')
     ImGui.LinkWindowToElement('shenanigansWindowDice', 'shenanigansMenuItemDice')
@@ -420,8 +421,8 @@ if REPENTOGON then
     ImGui.SetTooltip(btnCopyId, 'Copy')
   end
   
-  mod:AddCallback(ModCallbacks.MC_MAIN_MENU_RENDER, mod.onRender)
-  mod:AddCallback(ModCallbacks.MC_POST_RENDER, mod.onRender)
+  mod:setupImGuiMenu()
+  mod:AddCallback(ModCallbacks.MC_POST_MODS_LOADED, mod.onModsLoaded)
   
   Console.RegisterCommand('dice-shenanigans', 'Wrapper for goto, use with s.dice', 'Wrapper for goto, use with s.dice', false, AutocompleteType.GOTO)
 end
